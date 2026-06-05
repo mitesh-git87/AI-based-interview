@@ -190,7 +190,7 @@ async function verifyEmail(req, res) {
     });
   }
 
-  const otpdoc = await otpModel.findOne({ email });
+  const otpdoc = await otpModel.findOne({ email }).sort({ createdAt: -1 });
 
   if (!otpdoc) {
     return res.status(400).json({
