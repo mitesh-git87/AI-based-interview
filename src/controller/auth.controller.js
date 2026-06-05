@@ -12,50 +12,100 @@ const cookieOptions = {
   sameSite: "none",
 };
 
+// async function registerUser(req, res) {
+//   const { username, email, password } = req.body;
+
+//   const isUserAlreadyExists = await userModel.findOne({
+//     $or: [{ username }, { email }],
+//   });
+
+//   if (isUserAlreadyExists) {
+//     return res.status(401).json({
+//       message: "user already exists with same username or email",
+//     });
+//   }
+
+//   const hash = await bcrypt.hash(password, 10);
+
+//   const user = await userModel.create({
+//     username,
+//     email,
+//     password: hash,
+//   });
+
+//   const otp = generateOtp();
+//   const html = getOtpHtml(otp);
+
+//   const otpHash = await bcrypt.hash(otp, 10);
+
+//   await otpModel.create({
+//     email,
+//     user: user._id,
+//     otpHash,
+//   });
+
+//   await sendEmail(email, "OTP Verification", `your otp code is ${otp}`, html);
+
+//   res.status(201).json({
+//     message: "user created successfully",
+//     user: {
+//       id: user._id,
+//       username: user.username,
+//       email: user.email,
+//       verified: user.verified,
+//     },
+//   });
+// }
+
 async function registerUser(req, res) {
-  const { username, email, password } = req.body;
-
-  const isUserAlreadyExists = await userModel.findOne({
-    $or: [{ username }, { email }],
-  });
-
-  if (isUserAlreadyExists) {
-    return res.status(401).json({
-      message: "user already exists with same username or email",
+    const { username, email, password } = req.body;
+  
+    const isUserAlreadyExists = await userModel.findOne({
+      $or: [{ username }, { email }],
+    });
+  
+    if (isUserAlreadyExists) {
+      return res.status(401).json({
+        message: "user already exists with same username or email",
+      });
+    }
+  
+    const hash = await bcrypt.hash(password, 10);
+  
+    const user = await userModel.create({
+      username,
+      email,
+      password: hash,
+    });
+  
+    const otp = generateOtp();
+    const html = getOtpHtml(otp);
+  
+    const otpHash = await bcrypt.hash(otp, 10);
+  
+    await otpModel.create({
+      email,
+      user: user._id,
+      otpHash,
+    });
+  
+    try {
+      await sendEmail(email, "OTP Verification", `your otp code is ${otp}`, html);
+    } catch (error) {
+      console.log("Email failed. OTP for testing:", otp);
+    }
+  
+    res.status(201).json({
+      message: "user created successfully",
+      otpForTesting: otp,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        verified: user.verified,
+      },
     });
   }
-
-  const hash = await bcrypt.hash(password, 10);
-
-  const user = await userModel.create({
-    username,
-    email,
-    password: hash,
-  });
-
-  const otp = generateOtp();
-  const html = getOtpHtml(otp);
-
-  const otpHash = await bcrypt.hash(otp, 10);
-
-  await otpModel.create({
-    email,
-    user: user._id,
-    otpHash,
-  });
-
-  await sendEmail(email, "OTP Verification", `your otp code is ${otp}`, html);
-
-  res.status(201).json({
-    message: "user created successfully",
-    user: {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      verified: user.verified,
-    },
-  });
-}
 
 async function loginUser(req, res) {
   const { username, email, password } = req.body;
