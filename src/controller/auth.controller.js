@@ -89,11 +89,7 @@ async function registerUser(req, res) {
       otpHash,
     });
   
-    try {
-      await sendEmail(email, "OTP Verification", `your otp code is ${otp}`, html);
-    } catch (error) {
-      console.log("Email failed. OTP for testing:", otp);
-    }
+    console.log("OTP for testing:", otp);
   
     res.status(201).json({
       message: "user created successfully",
@@ -106,7 +102,6 @@ async function registerUser(req, res) {
       },
     });
   }
-
 async function loginUser(req, res) {
   const { username, email, password } = req.body;
 
