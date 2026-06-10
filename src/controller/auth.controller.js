@@ -2,8 +2,8 @@ const userModel = require("../models/user.model");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const tokenBlacklistModel = require("../models/blacklist.models");
-const sendEmail = require("../services/email.service");
-const { generateOtp, getOtpHtml } = require("../utils/utils");
+// const sendEmail = require("../services/email.service");  // ❌ disabled
+// const { generateOtp, getOtpHtml } = require("../utils/utils"); // ❌ not needed now
 const otpModel = require("../models/otp.model");
 
 const cookieOptions = {
@@ -12,96 +12,54 @@ const cookieOptions = {
   sameSite: "none",
 };
 
-// async function registerUser(req, res) {
-//   const { username, email, password } = req.body;
-
-//   const isUserAlreadyExists = await userModel.findOne({
-//     $or: [{ username }, { email }],
-//   });
-
-//   if (isUserAlreadyExists) {
-//     return res.status(401).json({
-//       message: "user already exists with same username or email",
-//     });
-//   }
-
-//   const hash = await bcrypt.hash(password, 10);
-
-//   const user = await userModel.create({
-//     username,
-//     email,
-//     password: hash,
-//   });
-
-//   const otp = generateOtp();
-//   const html = getOtpHtml(otp);
-
-//   const otpHash = await bcrypt.hash(otp, 10);
-
-//   await otpModel.create({
-//     email,
-//     user: user._id,
-//     otpHash,
-//   });
-
-//   await sendEmail(email, "OTP Verification", `your otp code is ${otp}`, html);
-
-//   res.status(201).json({
-//     message: "user created successfully",
-//     user: {
-//       id: user._id,
-//       username: user.username,
-//       email: user.email,
-//       verified: user.verified,
-//     },
-//   });
-// }
+// ✅ HARDCODED OTP FOR DEMO (since email service is not working)
+const DEMO_OTP = "123456";
 
 async function registerUser(req, res) {
-    const { username, email, password } = req.body;
-  
-    const isUserAlreadyExists = await userModel.findOne({
-      $or: [{ username }, { email }],
-    });
-  
-    if (isUserAlreadyExists) {
-      return res.status(401).json({
-        message: "user already exists with same username or email",
-      });
-    }
-  
-    const hash = await bcrypt.hash(password, 10);
-  
-    const user = await userModel.create({
-      username,
-      email,
-      password: hash,
-    });
-  
-    const otp = generateOtp();
-    const html = getOtpHtml(otp);
-  
-    const otpHash = await bcrypt.hash(otp, 10);
-  
-    await otpModel.create({
-      email,
-      user: user._id,
-      otpHash,
-    });
-  
-    console.log("OTP for testing:", otp);
-  
-    res.status(201).json({
-      message: "user created successfully",
-      otpForTesting: otp,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        verified: user.verified,
-      },
+  const { username, email, password } = req.body;
+
+  const isUserAlreadyExists = await userModel.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (isUserAlreadyExists) {
+    return res.status(401).json({
+      message: "user already exists with same username or email",
     });
   }
+
+  const hash = await bcrypt.hash(password, 10);
+
+  const user = await userModel.create({
+    username,
+    email,
+    password: hash,
+  });
+
+  // 🔒 Use hardcoded OTP instead of generating
+  const otp = DEMO_OTP;
+  const otpHash = await bcrypt.hash(otp, 10);
+
+  await otpModel.create({
+    email,
+    user: user._id,
+    otpHash,
+  });
+
+  console.log(`✅ Demo OTP for ${email} is: ${otp}`);
+
+  res.status(201).json({
+    message: "user created successfully. Use 123456 as OTP to verify your email.",
+    demoOtpNote: "Use 123456 as OTP (email service disabled)",
+    user: {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      verified: user.verified,
+    },
+  });
+}
+
 async function loginUser(req, res) {
   const { username, email, password } = req.body;
 
@@ -130,9 +88,7 @@ async function loginUser(req, res) {
   }
 
   const token = jwt.sign(
-    {
-      id: user._id,
-    },
+    { id: user._id },
     process.env.JWT_SECRET
   );
 
@@ -202,23 +158,17 @@ async function verifyEmail(req, res) {
 
   if (!isOtpValid) {
     return res.status(400).json({
-      message: "Invalid OTP",
+      message: "Invalid OTP. Please use 123456",
     });
   }
 
   const user = await userModel.findByIdAndUpdate(
     otpdoc.user,
-    {
-      verified: true,
-    },
-    {
-      new: true,
-    }
+    { verified: true },
+    { new: true }
   );
 
-  await otpModel.deleteMany({
-    user: otpdoc.user,
-  });
+  await otpModel.deleteMany({ user: otpdoc.user });
 
   return res.status(200).json({
     message: "email verified successfully",
